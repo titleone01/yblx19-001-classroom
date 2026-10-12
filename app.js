@@ -153,7 +153,7 @@ function frame(now){
   if(t===1){if(animation.phase==='heating'||animation.phase==='short'){state.phase='tripped';state.closed=false;text('operation-status',lesson.kind==='thermal'?'已脱扣：控制用常闭触头断开，脱扣反馈触头闭合。':'已脱扣：各极主触头断开；复位后可重新合闸。');}else if(animation.phase==='cooling'){state.phase='idle';text('operation-status',operationDefaults.thermal);}animation=null;}applyPose();
  }
  if(state.phase==='timing'){state.elapsed=Math.min(state.delay,state.elapsed+dt);text('operation-status',`通电计时：${state.elapsed.toFixed(1)} / ${state.delay} 秒 · 瞬动 1–3 已接通，延时 8–6 尚未接通。`);if(state.elapsed>=state.delay){state.phase='elapsed';state.closed=true;tween(1,'elapsed');text('operation-status','计时到达：延时 8–6 接通、8–5 断开；断电后瞬动和延时触头均复位。');}dirty=true;}
- controls?.update();if(dirty&&state.loaded){updateLabels();renderer.render(scene,camera);dirty=false;}
+ controls?.update();if(dirty&&state.loaded){camera.updateMatrixWorld(true);updateLabels();renderer.render(scene,camera);dirty=false;}
 }
 window.__COMPONENT__={snapshot:()=>({...state,factoryTriangles:lesson.factoryTriangles,factoryParts:factoryParts.size,teachingGroups:teachGroups.size,load:{...loadMetrics},camera:camera.position.toArray(),target:controls?.target.toArray(),visibleHotspots:[...hotspots].filter(([,a])=>!a.h.hidden).map(([id])=>id),parentsPreserved:[...rest].every(([o,r])=>o.parent===r.parent),maximumRestErrorMM:Math.max(0,...[...rest].filter(([o])=>factoryParts.has(o.name)).map(([o,r])=>o.position.distanceTo(r.position)*1000)),teachingPositions:Object.fromEntries([...teachGroups].map(([id,o])=>[id,o.position.toArray()])),renderedFrames:renderer?.info.render.frame})};
 setupUI();text('operation-status',operationDefaults[lesson.kind]);load();
