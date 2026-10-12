@@ -1,0 +1,13 @@
+import {build} from 'esbuild';
+import {readFile,writeFile,mkdir} from 'node:fs/promises';
+import {createHash} from 'node:crypto';
+import path from 'node:path';
+import {fileURLToPath} from 'node:url';
+import {writeOffline} from './offline-builder.mjs';
+const root=path.dirname(fileURLToPath(import.meta.url));
+const lesson=JSON.parse(await readFile(path.join(root,'lesson.json'),'utf8'));
+const result=await build({absWorkingDir:root,entryPoints:['app.js'],bundle:true,minify:true,format:'esm',target:'es2020',write:false,legalComments:'eof',plugins:[{name:'vendor',setup(b){b.onResolve({filter:/^three$/},()=>({path:path.join(root,'vendor/three.module.js')}));b.onResolve({filter:/^three\/addons\//},a=>({path:path.join(root,'vendor/addons',a.path.slice('three/addons/'.length))}));}}]});
+const bytes=result.outputFiles[0].contents,hash=createHash('sha256').update(bytes).digest('hex').slice(0,12),name='app-'+hash+'.js';
+await writeFile(path.join(root,name),bytes);let html=await readFile(path.join(root,'index.html'),'utf8');html=html.replace(/src="\.\/app(?:-[a-f0-9]+)?\.js"/,`src="./${name}"`);await writeFile(path.join(root,'index.html'),html);
+const offline=await writeOffline(root,path.join(root,'offline',lesson.id+'_离线.html'),{onlineUrl:'https://titleone01.github.io/'+lesson.repo+'/'});
+console.log(JSON.stringify({bundle:name,bytes:bytes.length,offline}));
