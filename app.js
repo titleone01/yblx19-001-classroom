@@ -1,11 +1,13 @@
 import * as THREE from 'three';
 import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
 import {loadFactoryModel,loadMetrics} from './model-loader.js';
+import {setupStudioLighting} from './studio-lighting.js';
 import lesson from './lesson.json';
 const $=id=>document.getElementById(id), stage=$('viewer');
 const state={loaded:false,loading:false,mode:'factory',topic:'overview',explosion:0,labels:true,isolate:true,view:'overview',phase:'idle',progress:0,heat:0,pole:0,delay:5,elapsed:0,closed:false,fused:Array(lesson.poles).fill(false),carriers:Array(lesson.poles).fill(true)};
 const scene=new THREE.Scene(),camera=new THREE.PerspectiveCamera(32,1,.1,5000);
-let renderer,controls,model,factory,teaching,last=0,dirty=true,animation=null,highlight=null;
+if(lesson.id==='jsz3')camera.up.set(0,-1,0);
+let renderer,controls,model,factory,teaching,studioEnvironment,last=0,dirty=true,animation=null,highlight=null;
 const factoryParts=new Map(),teachGroups=new Map(),rest=new Map(),hotspots=new Map();
 const directions={overview:[1,.40,1.8],front:[0,0,1],back:[0,0,-1],left:[-1,0,0],right:[1,0,0]};
 const names={overview:'整体观察',front:'正面',back:'背面',left:'左侧',right:'右侧',focus:'部件放大',free:'自由观察'};
@@ -137,11 +139,11 @@ async function load(){
  if(state.loading)return;state.loading=true;$('viewer-error').hidden=true;$('loading').hidden=false;
  document.querySelectorAll('main button, main input,main select').forEach(b=>b.disabled=true);
  try{
-  if(!renderer){renderer=new THREE.WebGLRenderer({alpha:true,antialias:true});renderer.setPixelRatio(Math.min(devicePixelRatio,1.5));renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=.95;renderer.domElement.setAttribute('aria-label',lesson.title+'三维模型，拖动旋转，滚轮或双指缩放');stage.prepend(renderer.domElement);controls=new OrbitControls(camera,renderer.domElement);controls.enableDamping=true;controls.enablePan=false;controls.minDistance=30;controls.maxDistance=1800;controls.addEventListener('change',()=>dirty=true);controls.addEventListener('start',()=>{state.view='free';text('view-name',names.free);});scene.add(new THREE.HemisphereLight('#ffffff','#91a9bd',1.25));for(const [p,power]of [[[120,160,220],2.2], [[-120,30,80],1.0],[[80,80,-150],1.0]]){const l=new THREE.DirectionalLight('#ffffff',power);l.position.set(...p);scene.add(l);}new ResizeObserver(resize).observe(stage);resize();requestAnimationFrame(frame);}
+  if(!renderer){renderer=new THREE.WebGLRenderer({alpha:true,antialias:true});renderer.setPixelRatio(Math.min(devicePixelRatio,1.5));renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.05;renderer.domElement.setAttribute('aria-label',lesson.title+'三维模型，拖动旋转，滚轮或双指缩放');stage.prepend(renderer.domElement);controls=new OrbitControls(camera,renderer.domElement);controls.enableDamping=true;controls.enablePan=false;controls.minDistance=30;controls.maxDistance=1800;controls.addEventListener('change',()=>dirty=true);controls.addEventListener('start',()=>{state.view='free';text('view-name',names.free);});studioEnvironment=setupStudioLighting(renderer,scene);new ResizeObserver(resize).observe(stage);resize();requestAnimationFrame(frame);}
   const gltf=await loadFactoryModel(s=>text('loading-text',s));if(model)scene.remove(model);model=gltf.scene;model.scale.setScalar(1000);scene.add(model);model.updateMatrixWorld(true);factory=model.getObjectByName('factory');teaching=model.getObjectByName('teaching');if(!factory||!teaching)throw Error('模型缺少原厂或教学结构节点');
   rest.clear();factoryParts.clear();teachGroups.clear();for(const def of lesson.parts){const o=model.getObjectByName(def.id);if(!o)throw Error('原厂部件缺失：'+def.id);factoryParts.set(def.id,o);}
   for(const def of lesson.topics){const o=model.getObjectByName('teach_'+def.id);if(!o)throw Error('教学部件缺失：'+def.id);teachGroups.set(def.id,o);}
-  model.traverse(o=>{rest.set(o,{position:o.position.clone(),quaternion:o.quaternion.clone(),scale:o.scale.clone(),parent:o.parent});if(o.isMesh){let factoryGeometry=false;for(let p=o;p;p=p.parent)if(p.userData.geometry_origin==='factory')factoryGeometry=true;const array=Array.isArray(o.material);const materials=(array?o.material:[o.material]).map(m=>{const copy=m.clone();if(factoryGeometry)copy.color.multiplyScalar(.58);else copy.color.convertSRGBToLinear();if(o.userData.geometry_origin==='teaching'&&['housing','cover'].includes(o.userData.lesson_id)){copy.transparent=true;copy.opacity=.16;copy.depthWrite=false;}return copy;});o.material=array?materials:materials[0];}});
+  model.traverse(o=>{rest.set(o,{position:o.position.clone(),quaternion:o.quaternion.clone(),scale:o.scale.clone(),parent:o.parent});if(o.isMesh){const array=Array.isArray(o.material);const materials=(array?o.material:[o.material]).map(m=>{const copy=m.clone();if(o.userData.geometry_origin==='teaching'&&['housing','cover'].includes(o.userData.lesson_id)){copy.transparent=true;copy.opacity=.16;copy.depthWrite=false;}return copy;});o.material=array?materials:materials[0];}});
   state.actualFactoryTriangles=0;factory.traverse(o=>{if(o.isMesh)state.actualFactoryTriangles+=(o.geometry.index?.count||o.geometry.attributes.position.count)/3;});
   state.loaded=true;state.loading=false;text('model-status','原厂模型 · 已载入');$('loading').hidden=true;document.querySelectorAll('main button,main input,main select').forEach(b=>b.disabled=false);setMode('factory');
  }catch(e){console.error(e);state.loading=false;state.loaded=false;$('loading').hidden=true;$('viewer-error').hidden=false;text('error-text',e.message+(location.protocol==='file:'?'。请确认文件完整，并使用支持 WebGL 的 Chrome 或 Edge。':'。请检查连接后重试。'));text('model-status','模型载入未完成');$('retry-model').disabled=false;}
@@ -155,5 +157,15 @@ function frame(now){
  if(state.phase==='timing'){state.elapsed=Math.min(state.delay,state.elapsed+dt);text('operation-status',`通电计时：${state.elapsed.toFixed(1)} / ${state.delay} 秒 · 瞬动 1–3 已接通，延时 8–6 尚未接通。`);if(state.elapsed>=state.delay){state.phase='elapsed';state.closed=true;tween(1,'elapsed');text('operation-status','计时到达：延时 8–6 接通、8–5 断开；断电后瞬动和延时触头均复位。');}dirty=true;}
  controls?.update();if(dirty&&state.loaded){camera.updateMatrixWorld(true);updateLabels();renderer.render(scene,camera);dirty=false;}
 }
-window.__COMPONENT__={snapshot:()=>({...state,factoryTriangles:lesson.factoryTriangles,factoryParts:factoryParts.size,teachingGroups:teachGroups.size,load:{...loadMetrics},camera:camera.position.toArray(),target:controls?.target.toArray(),visibleHotspots:[...hotspots].filter(([,a])=>!a.h.hidden).map(([id])=>id),parentsPreserved:[...rest].every(([o,r])=>o.parent===r.parent),maximumRestErrorMM:Math.max(0,...[...rest].filter(([o])=>factoryParts.has(o.name)).map(([o,r])=>o.position.distanceTo(r.position)*1000)),teachingPositions:Object.fromEntries([...teachGroups].map(([id,o])=>[id,o.position.toArray()])),renderedFrames:renderer?.info.render.frame})};
+function materialDiagnostics(){
+ const records=[];
+ model?.traverse(o=>{
+  if(!o.isMesh)return;
+  let partId=null,origin=null;
+  for(let p=o;p;p=p.parent){if(!partId&&p.userData.part_id)partId=p.userData.part_id;if(!origin&&p.userData.geometry_origin)origin=p.userData.geometry_origin;}
+  for(const material of Array.isArray(o.material)?o.material:[o.material])records.push({mesh:o.name,partId,origin,name:material.name,color:material.color.toArray(),metalness:material.metalness,roughness:material.roughness,opacity:material.opacity,transparent:material.transparent,transmission:material.transmission||0,ior:material.ior??1.5,clearcoat:material.clearcoat||0,clearcoatRoughness:material.clearcoatRoughness||0});
+ });
+ return records;
+}
+window.__COMPONENT__={materials:materialDiagnostics,snapshot:()=>({...state,factoryTriangles:lesson.factoryTriangles,factoryParts:factoryParts.size,teachingGroups:teachGroups.size,load:{...loadMetrics},camera:camera.position.toArray(),target:controls?.target.toArray(),studio:{environmentReady:!!studioEnvironment,environmentIntensity:scene.environmentIntensity,exposure:renderer?.toneMappingExposure,environmentResolution:128},visibleHotspots:[...hotspots].filter(([,a])=>!a.h.hidden).map(([id])=>id),parentsPreserved:[...rest].every(([o,r])=>o.parent===r.parent),maximumRestErrorMM:Math.max(0,...[...rest].filter(([o])=>factoryParts.has(o.name)).map(([o,r])=>o.position.distanceTo(r.position)*1000)),teachingPositions:Object.fromEntries([...teachGroups].map(([id,o])=>[id,o.position.toArray()])),renderedFrames:renderer?.info.render.frame})};
 setupUI();text('operation-status',operationDefaults[lesson.kind]);load();
