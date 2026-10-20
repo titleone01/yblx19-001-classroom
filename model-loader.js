@@ -9,7 +9,7 @@ export async function loadFactoryModel(onProgress){
  const gzip=typeof DecompressionStream!=='undefined';const url=new URL('./assets/'+(gzip?modelAsset.compressed:modelAsset.fallback),import.meta.url).href;
  let cache;try{cache=await caches.open(lesson.id+'-'+modelAsset.sha256.slice(0,12));}catch{}
  const parse=async bytes=>{
-  onProgress('解析原厂模型与教学结构…');
+  onProgress('解析原厂模型…');
   let buffer=bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength);
   if(!isGLB(bytes))buffer=await new Response(new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'))).arrayBuffer();
   if(buffer.byteLength!==modelAsset.decodedBytes||!isGLB(new Uint8Array(buffer)))throw Error('模型数据校验未通过');
