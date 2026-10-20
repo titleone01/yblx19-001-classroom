@@ -1,24 +1,21 @@
-# YBLX-19/001 三维互动教材
+# YBLX-19/001 三维硬件认识
 
-在线页面：https://titleone01.github.io/yblx19-001-classroom/
+模型来源：原厂模型（人工整理材质和观察分组）
+型号：YBLX-19/001
 
-## 构建与离线文件
+当前三维不含本项目自建的内部机构。
+原厂输入：
+  - YBLX-19_001行程开关三维模型202502.stp
+  - YBLX-19_K行程开关三维模型202502.stp
 
-使用 Node.js，运行 `npm ci`、`npm run build`。构建会更新内容哈希脚本和 HTML，并生成 `offline/yblx19-001_离线.html`。该文件包含完整模型、脚本、解码器、样式和讲解，单独拷走后可在 Chrome / Edge 双击断网运行。
+人工整理：原曲面观察编组、材质与灯光整理；不将其称作原厂材料实测或厂家维修拆装树。
+二维原理：本项目程序绘制的二维教学示意，不是原厂工程图
 
-## 模型和讲解
+尚未取得或未核实的部分：
+另取得相容的原厂YBLX-19/K芯子，按官方说明和原安装孔组合；完整触点/弹簧与传动内部仍缺可核实的可拆源。仅移动原001柱塞，触点关系用二维示意。
 
-`lesson.json` 保存每个部件的原厂 / 教学来源、部位说明、装配分组及动作定义；`app.js` 根据保存的初始姿态计算分解和动作，避免累计偏移。`assets/model.json` 记录模型文件、长度与 SHA-256。原厂几何未减面，三维教学机构明确标注。
+历史提醒：旧版model-full.glb/Blender曾同时含factory与自建teaching两套结构，已另作回退存档；不能把旧混合源当作当前纯原厂运行模型。
 
-原始模型：YBLX-19_001行程开关三维模型202502.stp
-官方资料：https://www.chint.net/products/491.html
+直接打开offline中的单个HTML即可独立离线使用。修改后执行`npm run build`；已固定构建依赖及本地vendor资源，无CDN依赖。
 
-工作动作属于功能教学示意；参数、端子配置和选型以对应实物及官方说明书为准。原始 STEP、Blender 工程和制作验证随本地项目完整保存。
-
-## 发布
-
-GitHub Pages 使用 main 根目录，保留 `.nojekyll`；发布后核对线上资源并实际操作。本站不依赖外部 CDN。iframe 示例见 `embed-example.html`。
-
-## 来源和版权
-
-CHINT、正泰与原厂 CAD 权利归各自权利人。Three.js、Meshopt、esbuild 等依赖许可证保留，详见 THIRD_PARTY_NOTICES.md 与 vendor。
+本轮源文件由项目根`tools/components/factory-source-map.json`指向并核对SHA，禁止使用旧混合制作源覆盖。源和技术证据在`outputs/原厂模型真实性核查_20261020`。

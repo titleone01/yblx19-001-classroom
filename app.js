@@ -138,7 +138,7 @@ function action(command){
  applyPose();
 }
 function setupUI(){
- text('title',lesson.title);text('product-model',lesson.model);text('intro',lesson.subtitle);text('source-description','三维来源：'+lesson.sourceFilename+'。仅展示该源文件实际包含的几何，不补建内部机构。');
+ text('title',lesson.title);text('product-model',lesson.model);text('intro',lesson.subtitle);text('source-description','三维来源：'+(lesson.sourceFilenames?.join(' + ')||lesson.sourceFilename)+'。仅展示该源文件实际包含的几何，不补建内部机构。');
  $('official-link').href=$('lesson-source').href=lesson.sourceUrl;$('repo-link').href='https://github.com/titleone01/'+lesson.repo;document.title=lesson.model+' · '+lesson.title+'三维互动教材';
  for(const [cmd,label]of lesson.actions){const b=document.createElement('button');b.type='button';b.dataset.action=cmd;b.textContent=label;b.onclick=()=>action(cmd);$('action-buttons').append(b);}
  for(const [index,step]of lesson.steps.entries()){const d=document.createElement('div');d.className='step';const n=document.createElement('span');n.textContent=String(index+1).padStart(2,'0');const b=document.createElement('b');b.textContent=step;d.append(n,b);$('principle-steps').append(d);}
